@@ -2,97 +2,92 @@ import streamlit as st
 import google.generativeai as genai
 
 # --- PAGE CONFIG ---
-st.set_page_config(
-    page_title="IN-SUFFERABLE", 
-    page_icon="📈", 
-    layout="centered"
-)
+st.set_page_config(page_title="IN-SUFFERABLE", page_icon="📈", layout="centered")
 
-# --- PERSONA DATA & UI THEMES ---
+# --- PERSONA DATA ---
 PERSONAS = {
     "The Commander": {
-        "icon": "🪖",
-        "accent": "#a3cf62", # Tactical Green
-        "bg": "#0d0f0a",
-        "header": "MISSION BRIEFING",
-        "desc": "Jocko Willink meets a Battalion CO.",
-        "prompt": "You are 'The Commander.' You view life as a tactical operation. Use words like SOP, Mission-Critical, Time on Target, and Standards. Every sentence is its own line. Turn the user's story into a lesson about discipline and extreme ownership. End with 'Agree?' or 'HOOAH?'"
+        "icon": "🪖", "color": "#a3cf62", "bg": "#0d0f0a",
+        "tagline": "Tactical Discipline & Extreme Ownership.",
+        "header": "SITREP: MISSION READINESS",
+        "prompt": "You are 'The Commander.' You sound like Jocko Willink. Translate mundane stories into failed combat ops and SOP failures. One sentence per line. End with 'Agree?' or 'HOOAH?' #Discipline #ExtremeOwnership"
     },
     "The MD": {
-        "icon": "💼",
-        "accent": "#00ffcc", # Finance Cyan
-        "bg": "#0a0b12",
-        "header": "MARKET UPDATE: PORTFOLIO OPTIMIZATION",
-        "desc": "High-energy Finance Bro in a Patagonia vest.",
-        "prompt": "You are 'The MD.' You view life through ROI and Capital Allocation. Use words like Liquidity, Burn Rate, Portfolio Company, Scaling, and Alpha. Every sentence is its own line. Turn the user's story into a lesson about maximizing margins and cutting underperforming assets. End with 'What's your margin?'"
+        "icon": "💼", "color": "#00ffcc", "bg": "#0a0b12",
+        "tagline": "Capital Allocation & High-Stakes Finance.",
+        "header": "QUARTERLY REPORT: PORTFOLIO OPTIMIZATION",
+        "prompt": "You are 'The MD.' A ruthless Finance Bro. Reframe stories as business case studies, burn rates, and ROI leaks. One sentence per line. End with 'What's your margin?' #Alpha #VentureCapital"
     },
     "The Chief People Officer": {
-        "icon": "✨",
-        "accent": "#ff99cc", # Soft Visionary Pink
-        "bg": "#0f0d12",
-        "header": "HUMAN-CENTRIC BRAND TOUCHPOINT",
-        "desc": "Uses 'synergy' and 'impactful' while firing people.",
-        "prompt": "You are 'The CPO.' You view life through optics and personal branding. Use words like Synergy, Alignment, Brand Touchpoint, Frictionless, and Pivot. Every sentence is its own line. Turn the user's story into a lesson about servant leadership and growth mindset. Use many sparkles. End with 'Agree? #Blessed'"
+        "icon": "✨", "color": "#ff99cc", "bg": "#0f0d12",
+        "tagline": "Toxic Positivity & Servant Leadership.",
+        "header": "CULTURE CHECK: HUMAN-CENTRIC SYNERGY",
+        "prompt": "You are 'The CPO.' Use massive amounts of corporate buzzwords. Reframe stories as brand touchpoints and soul-centered pivots. One sentence per line. End with 'Agree? ✨' #CultureFirst #Blessed"
     }
 }
 
 # --- INITIALIZE STATE ---
 if "persona" not in st.session_state:
     st.session_state.persona = "The Commander"
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
 current = PERSONAS[st.session_state.persona]
 
-# --- DYNAMIC MOBILE-FIRST CSS ---
+# --- UI STYLING (NUCLEAR VISIBILITY) ---
 st.markdown(f"""
     <style>
-    /* Global visibility fixes */
     .stApp {{ background-color: {current['bg']} !important; }}
+    .stApp, p, span, div, li, label, .stMarkdown {{ color: #FFFFFF !important; font-family: 'Inter', -apple-system, sans-serif !important; }}
     
-    .stApp, p, span, div, li, label, .stMarkdown {{ 
-        color: #FFFFFF !important; 
-        font-family: 'Inter', -apple-system, sans-serif !important; 
-    }}
+    /* Title & Header Colors */
+    h1 {{ color: {current['color']} !important; text-align: center; font-weight: 800 !important; letter-spacing: -1px; margin-bottom: 0px !important; }}
+    h3, h4 {{ color: {current['color']} !important; text-transform: uppercase; text-align: center; margin-top: 5px !important; }}
 
-    h1, h2, h3 {{ 
-        color: {current['accent']} !important; 
-        text-transform: uppercase; 
+    /* Instruction Box */
+    .instruction-card {{
+        background-color: #1a1d14;
+        padding: 20px;
+        border: 2px solid {current['color']};
+        border-radius: 12px;
+        margin-bottom: 25px;
         text-align: center;
     }}
+    .step-number {{
+        display: inline-block;
+        background-color: {current['color']};
+        color: #000;
+        border-radius: 50%;
+        width: 25px;
+        height: 25px;
+        font-weight: bold;
+        margin-right: 5px;
+    }}
 
-    /* The Persona Switcher Buttons */
+    /* Persona Buttons Styling */
     div.stButton > button {{
         width: 100%;
-        border-radius: 4px;
-        height: 3em;
+        border-radius: 8px;
         background-color: #1a1d14;
         color: white !important;
         border: 1px solid #333;
-        font-size: 12px !important;
+        transition: all 0.3s ease;
+    }}
+    
+    /* Highlight Active Persona Button */
+    div.stButton > button:hover {{
+        border: 1px solid {current['color']} !important;
+        color: {current['color']} !important;
     }}
 
-    /* Highlight the selected button */
-    div.stButton > button:active, div.stButton > button:focus {{
-        border: 2px solid {current['accent']} !important;
-        color: {current['accent']} !important;
-    }}
-
-    /* Mission Box Styling */
-    .mission-box {{
-        background-color: #1a1d14;
-        padding: 15px;
-        border: 1px solid {current['accent']};
-        border-radius: 8px;
-        margin-top: 10px;
-        margin-bottom: 20px;
-    }}
-
-    /* Chat Styling */
+    /* Chat Messages */
     [data-testid="stChatMessage"] {{
         background-color: #1a1d14 !important;
-        border-left: 5px solid {current['accent']} !important;
+        border-left: 5px solid {current['color']} !important;
+        border-radius: 8px !important;
     }}
 
-    /* Hide the sidebar completely on mobile to avoid confusion */
+    /* Hide sidebar on mobile */
     [data-testid="stSidebar"] {{ display: none; }}
     </style>
     """, unsafe_allow_html=True)
@@ -101,73 +96,86 @@ st.markdown(f"""
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"].strip())
 else:
-    st.error("❌ API KEY MISSING IN SECRETS.")
+    st.error("API KEY MISSING.")
     st.stop()
 
-# --- MAIN UI ---
-st.title(f"{current['icon']} IN-SUFFERABLE")
+# --- HEADER SECTION ---
+st.title("📈 IN-SUFFERABLE")
+st.write("#### THE LINKEDIN BROETRY GENERATOR")
 
-# --- PERSONA TABS (The Mobile Fix) ---
-st.write("### CHOOSE YOUR FLAVOR OF CRINGE:")
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    if st.button("🪖 COMMANDER"):
-        st.session_state.persona = "The Commander"
-        st.rerun()
-with col2:
-    if st.button("💼 THE MD"):
-        st.session_state.persona = "The MD"
-        st.rerun()
-with col3:
-    if st.button("✨ THE CPO"):
-        st.session_state.persona = "The Chief People Officer"
-        st.rerun()
-
-# --- MISSION BRIEFING ---
+# Onboarding / Step-by-Step UI
 st.markdown(f"""
-    <div class="mission-box">
-        <h4 style="margin-top:0; color:{current['accent']} !important;">{current['header']}</h4>
-        <p style="font-size: 0.9em; opacity: 0.8;">{current['desc']}</p>
-        <p style="margin-bottom:0;">Turn your story into a {st.session_state.persona} post below.</p>
+    <div class="instruction-card">
+        <div style="margin-bottom: 10px;">
+            <span class="step-number">1</span> <strong>SELECT YOUR BRAIN</strong>
+        </div>
+        <div style="font-size: 0.85em; opacity: 0.8; margin-bottom: 15px;">
+            Choose a persona to reframe your story.
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
-# --- MODEL LOADING ---
+# --- PERSONA SELECTOR ---
+col1, col2, col3 = st.columns(3)
+with col1:
+    if st.button(f"{PERSONAS['The Commander']['icon']}\nCOMMANDER"): 
+        st.session_state.persona = "The Commander"
+        st.rerun()
+with col2:
+    if st.button(f"{PERSONAS['The MD']['icon']}\nTHE MD"): 
+        st.session_state.persona = "The MD"
+        st.rerun()
+with col3:
+    if st.button(f"{PERSONAS['The Chief People Officer']['icon']}\nTHE CPO"): 
+        st.session_state.persona = "The Chief People Officer"
+        st.rerun()
+
+# --- STEP 2 & 3 INSTRUCTIONS ---
+st.markdown(f"""
+    <div style="text-align: center; margin-bottom: 20px;">
+        <span class="step-number">2</span> <strong>TELL A STORY</strong> &nbsp;&nbsp;&nbsp; 
+        <span class="step-number">3</span> <strong>GO VIRAL</strong>
+    </div>
+    <div style="border-top: 1px solid #333; padding-top: 10px; text-align: center;">
+        <p style="font-size: 0.9em; color: {current['color']} !important; font-weight: bold;">
+            ACTIVE PERSONA: {st.session_state.persona.upper()}
+        </p>
+        <p style="font-size: 0.8em; opacity: 0.7;">VIBE: {current['tagline']}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# --- MODEL LOGIC ---
 @st.cache_resource
-def get_working_model():
-    try:
-        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        for target in ["models/gemini-1.5-flash", "models/gemini-pro"]:
-            if target in available_models: return target
-        return available_models[0]
-    except: return None
+def get_model(p_name):
+    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+    m_name = "models/gemini-1.5-flash" if "models/gemini-1.5-flash" in available_models else available_models[0]
+    return genai.GenerativeModel(
+        model_name=m_name, 
+        system_instruction=PERSONAS[p_name]['prompt'],
+        generation_config={"temperature": 0.9} 
+    )
 
-model_name = get_working_model()
-
-# --- CHAT INTERFACE ---
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
+# --- CHAT DISPLAY ---
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-if prompt := st.chat_input("Tell me your story..."):
+# --- INPUT SECTION ---
+if prompt := st.chat_input("Tell me a boring story (e.g., I bought coffee)..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.write(prompt)
 
     with st.chat_message("assistant"):
         try:
-            model = genai.GenerativeModel(model_name=model_name, system_instruction=current['prompt'])
-            response = model.generate_content(prompt)
-            if response.text:
-                msg = response.text
-                st.write(msg)
-                st.session_state.messages.append({"role": "assistant", "content": msg})
-                st.success(f"🫡 {st.session_state.persona.upper()} OUTPUT READY.")
-            else:
-                st.warning("REDACTED: Story blocked by safety filters.")
+            model = get_model(st.session_state.persona)
+            enhanced_prompt = f"Take this mundane story and re-imagine it as a high-stakes, cringe-worthy LinkedIn post using your specific persona: '{prompt}'. Do not be literal. Use heavy jargon and 'Broetry' formatting."
+            
+            response = model.generate_content(enhanced_prompt)
+            msg = response.text
+            st.write(msg)
+            st.session_state.messages.append({"role": "assistant", "content": msg})
+            
+            st.success("🫡 POST GENERATED. Copy to LinkedIn and wait for the engagement.")
         except Exception as e:
-            st.error(f"⚠️ COMMS ERROR: {str(e)}")
+            st.error(f"UPLINK ERROR: {str(e)}")
