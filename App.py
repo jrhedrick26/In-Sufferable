@@ -9,7 +9,7 @@ PERSONAS = {
     "The Commander": {
         "icon": "🪖", 
         "color": "#a3cf62", 
-        "bg_img": "https://images.unsplash.com/photo-1599940824399-b87987cb972d?q=80&w=2000&auto=format&fit=crop",
+        "bg_img": "https://images.unsplash.com/photo-1518544801976-3e159e50e5bb?q=80&w=2000&auto=format&fit=crop",
         "tagline": "Soldier-Scholar & Strategic Thought Leader.",
         "prompt": """You are a 'Military Thought Leader' on LinkedIn. You sound like a Battalion Commander with an MBA.
         Your mission is to take a mundane user story and turn it into a profound lesson on 'Organizational Readiness'.
@@ -63,20 +63,18 @@ if "messages" not in st.session_state:
 # Update UI constants based on current persona
 current = PERSONAS[st.session_state.persona]
 
-# --- DYNAMIC CSS (THE BULLETPROOF FIX) ---
-# We generate a unique ID string for the style tag. 
-# This FORCES the browser to delete the old CSS and load the new one every single time.
-unique_style_id = f"theme-{st.session_state.persona.replace(' ', '-')}"
-
-st.markdown(f"""
-    <style id="{unique_style_id}">
+# --- DYNAMIC CSS (STREAMLIT 1.37+ FIX) ---
+# Using st.html() bypasses the Markdown wrapper and forces direct DOM injection
+st.html(f"""
+    <style>
     /* Target the main view container */
     [data-testid="stAppViewContainer"] {{
-        background: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url("{current['bg_img']}") !important;
+        background-color: #1a1a1a !important; /* Fallback if image fails */
+        background-image: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url("{current['bg_img']}") !important;
         background-size: cover !important;
         background-position: center !important;
         background-attachment: fixed !important;
-        transition: background 0.4s ease-in-out;
+        transition: background-image 0.4s ease-in-out;
     }}
 
     /* Make the default Streamlit header transparent */
@@ -130,7 +128,7 @@ st.markdown(f"""
     /* Hide Sidebar */
     [data-testid="stSidebar"] {{ display: none; }}
     </style>
-    """, unsafe_allow_html=True)
+""")
 
 # --- API SETUP ---
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"].strip())
