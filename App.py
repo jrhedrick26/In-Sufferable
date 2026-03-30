@@ -6,7 +6,7 @@ import time
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="IN-SUFFERABLE", page_icon="📈", layout="centered")
 
-# --- PERSONA DATA & THEMES (ADDED UX STRINGS) ---
+# --- PERSONA DATA & THEMES ---
 PERSONAS = {
     "The Commander": {
         "icon": "🪖", 
@@ -72,14 +72,14 @@ if "persona" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# UX UPGRADE: Wipe chat and trigger greeting when switching personas
+# Wipe chat and trigger greeting when switching personas
 if st.session_state.get("last_persona") != st.session_state.persona:
     st.session_state.messages = []
     st.session_state.last_persona = st.session_state.persona
 
 current = PERSONAS[st.session_state.persona]
 
-# UX UPGRADE: Insert initial greeting if chat is empty
+# Insert initial greeting if chat is empty
 if len(st.session_state.messages) == 0:
     st.session_state.messages.append({"role": "assistant", "content": current["greeting"]})
 
@@ -131,7 +131,7 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 
-# UX UPGRADE: Visual indicators for the active persona
+# Visual indicators for the active persona
 def get_btn_label(name, key):
     return f"🟢 {name}" if st.session_state.persona == key else name
 
@@ -155,10 +155,16 @@ if not model_name:
     st.stop()
 
 # Display history
-for msg in st.session_state.messages:
+for i, msg in enumerate(st.session_state.messages):
     icon = "👤" if msg["role"] == "user" else current["icon"]
     with st.chat_message(msg["role"], avatar=icon):
-        st.write(msg["content"])
+        st.markdown(msg["content"])
+        
+        # ONE-CLICK COPY (Read-Only)
+        if msg["role"] == "assistant" and i > 0:
+            with st.expander("📋 1-Click Copy"):
+                # st.code makes the text read-only and adds a native copy button
+                st.code(msg["content"], language="text")
 
 if prompt := st.chat_input("Tell me what happened today..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -166,7 +172,6 @@ if prompt := st.chat_input("Tell me what happened today..."):
         st.write(prompt)
 
     with st.chat_message("assistant", avatar=current["icon"]):
-        # UX UPGRADE: Thematic loading spinners
         with st.spinner(current["loading"]):
             try:
                 full_prompt = f"Transform this story into a coherent, cringe-worthy LinkedIn post: '{prompt}'. Remember: Connect the story to a 'leadership' lesson using your persona's jargon."
@@ -184,7 +189,12 @@ if prompt := st.chat_input("Tell me what happened today..."):
                 clean_lines = [line.strip() for line in raw_msg.split('\n') if line.strip()]
                 broetry_msg = '\n\n'.join(clean_lines)
                 
-                st.write(broetry_msg)
+                st.markdown(broetry_msg)
+                
+                # ONE-CLICK COPY (Read-Only)
+                with st.expander("📋 1-Click Copy"):
+                    st.code(broetry_msg, language="text")
+                
                 st.session_state.messages.append({"role": "assistant", "content": broetry_msg})
             except Exception as e:
                 st.error(f"UPLINK ERROR: {str(e)}")
