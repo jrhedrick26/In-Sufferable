@@ -5,7 +5,6 @@ import google.generativeai as genai
 st.set_page_config(page_title="IN-SUFFERABLE", page_icon="📈", layout="centered")
 
 # --- PERSONA DATA & THEMES ---
-# UPDATED: Tweaked the prompts to explicitly demand double line breaks.
 PERSONAS = {
     "The Commander": {
         "icon": "🪖", 
@@ -64,21 +63,28 @@ if "messages" not in st.session_state:
 # Update UI constants based on current persona
 current = PERSONAS[st.session_state.persona]
 
-# --- DYNAMIC CSS ---
-# UPDATED: Added a unique class string tied to the persona name to force Streamlit to re-render the CSS.
-css_key = st.session_state.persona.replace(" ", "")
-st.markdown(f"""
-    <style class="dynamic-theme-{css_key}">
-    /* Full Page Background Overlay */
-    .stApp {{
+# --- DYNAMIC CSS (THE FIX) ---
+# Create an empty placeholder to force Streamlit to overwrite the style block on every rerun
+theme_container = st.empty()
+
+theme_container.markdown(f"""
+    <style>
+    /* Target the main view container instead of .stApp */
+    [data-testid="stAppViewContainer"] {{
         background: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url("{current['bg_img']}") !important;
         background-size: cover !important;
         background-position: center !important;
         background-attachment: fixed !important;
+        transition: background 0.4s ease-in-out;
+    }}
+
+    /* Make the default Streamlit header transparent so it doesn't block the background */
+    [data-testid="stHeader"] {{
+        background-color: transparent !important;
     }}
 
     /* Global Text Visibility */
-    .stApp, p, span, div, li, label, .stMarkdown {{ 
+    p, span, div, li, label, .stMarkdown {{ 
         color: #FFFFFF !important; 
         font-family: 'Inter', -apple-system, sans-serif !important; 
     }}
@@ -195,8 +201,7 @@ if prompt := st.chat_input("Tell me what happened today..."):
             response = model.generate_content(full_prompt)
             raw_msg = response.text
             
-            # UPDATED: Python post-processing to brutally enforce the "Broetry" format.
-            # This strips out all empty lines, then joins every single remaining line with a double break.
+            # Python post-processing to brutally enforce the "Broetry" format.
             clean_lines = [line.strip() for line in raw_msg.split('\n') if line.strip()]
             broetry_msg = '\n\n'.join(clean_lines)
             
