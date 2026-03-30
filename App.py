@@ -5,6 +5,7 @@ import google.generativeai as genai
 st.set_page_config(page_title="IN-SUFFERABLE", page_icon="📈", layout="centered")
 
 # --- PERSONA DATA & THEMES ---
+# UPDATED: Tweaked the prompts to explicitly demand double line breaks.
 PERSONAS = {
     "The Commander": {
         "icon": "🪖", 
@@ -19,7 +20,7 @@ PERSONAS = {
         2. Describe the user's story as a 'Tactical Case Study' or 'Field Observation'. 
         3. Use jargon like: Force Multiplier, Operational Tempo, Human Capital Sustainment, and Situational Awareness.
         4. Dramatize the mundane: (e.g., 'Forgot my keys' = 'A critical failure in equipment accountability protocols').
-        5. Every sentence MUST be on a new line (LinkedIn 'Broetry').
+        5. CRITICAL: Every single sentence MUST be separated by a BLANK LINE (double return). Do not write paragraphs.
         6. End with 'Agree?' or 'Hooah?' and hashtags like #Leadership #MilitaryMindset #ReadyToLead."""
     },
     "The MD": {
@@ -27,14 +28,14 @@ PERSONAS = {
         "color": "#00ffcc", 
         "bg_img": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2000&auto=format&fit=crop",
         "tagline": "Capital Allocation & High-Stakes Finance.",
-        "prompt": """You are a high-energy Venture Capitalist or MD in a Patagonia vest. 
+        "prompt": """You are a high-energy Venture Capitalist or Managing Director in a Patagonia vest. 
         Your mission is to turn a user's story into a lesson about ROI and scaling.
         
         WRITING RULES:
         1. Start with a cold truth about 'Capital', 'Leverage', or 'Alpha'.
         2. Describe the user's story as a 'Value Chain Leak' or 'Underperforming Asset'.
         3. Explain the 'Return on Investment' of the user's actions.
-        4. Every sentence MUST be on a new line.
+        4. CRITICAL: Every single sentence MUST be separated by a BLANK LINE (double return). Do not write paragraphs.
         5. End with 'What's your margin?' and hashtags like #Alpha #VentureCapital #Grindset."""
     },
     "The Chief People Officer": {
@@ -49,7 +50,7 @@ PERSONAS = {
         1. Start with an inspiring quote about 'The Human Spirit' or 'Leading with Heart'.
         2. Describe the user's story as a 'Growth Moment' or a 'Brand Touchpoint'.
         3. Use MANY sparkles and soft emojis. 
-        4. Every sentence MUST be on a new line.
+        4. CRITICAL: Every single sentence MUST be separated by a BLANK LINE (double return). Do not write paragraphs.
         5. End with 'Agree? ✨' and hashtags like #ServantLeadership #CultureFirst #Blessed."""
     }
 }
@@ -63,9 +64,11 @@ if "messages" not in st.session_state:
 # Update UI constants based on current persona
 current = PERSONAS[st.session_state.persona]
 
-# --- DYNAMIC CSS (FIXED SWITCHING & SAFARI) ---
+# --- DYNAMIC CSS ---
+# UPDATED: Added a unique class string tied to the persona name to force Streamlit to re-render the CSS.
+css_key = st.session_state.persona.replace(" ", "")
 st.markdown(f"""
-    <style>
+    <style class="dynamic-theme-{css_key}">
     /* Full Page Background Overlay */
     .stApp {{
         background: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url("{current['bg_img']}") !important;
@@ -181,19 +184,23 @@ if prompt := st.chat_input("Tell me what happened today..."):
 
     with st.chat_message("assistant", avatar=current["icon"]):
         try:
-            # Initialize model with persona's specific brain
             model = genai.GenerativeModel(
                 model_name=model_name, 
                 system_instruction=current['prompt'],
                 generation_config={"temperature": 0.85}
             )
             
-            # Context-focused user prompt
             full_prompt = f"Transform this story into a coherent, cringe-worthy LinkedIn post: '{prompt}'. Remember: Connect the story to a 'leadership' lesson using your persona's jargon."
             
             response = model.generate_content(full_prompt)
-            msg = response.text
-            st.write(msg)
-            st.session_state.messages.append({"role": "assistant", "content": msg})
+            raw_msg = response.text
+            
+            # UPDATED: Python post-processing to brutally enforce the "Broetry" format.
+            # This strips out all empty lines, then joins every single remaining line with a double break.
+            clean_lines = [line.strip() for line in raw_msg.split('\n') if line.strip()]
+            broetry_msg = '\n\n'.join(clean_lines)
+            
+            st.write(broetry_msg)
+            st.session_state.messages.append({"role": "assistant", "content": broetry_msg})
         except Exception as e:
             st.error(f"UPLINK ERROR: {str(e)}")
