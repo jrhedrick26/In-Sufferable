@@ -63,13 +63,14 @@ if "messages" not in st.session_state:
 # Update UI constants based on current persona
 current = PERSONAS[st.session_state.persona]
 
-# --- DYNAMIC CSS (THE FIX) ---
-# Create an empty placeholder to force Streamlit to overwrite the style block on every rerun
-theme_container = st.empty()
+# --- DYNAMIC CSS (THE BULLETPROOF FIX) ---
+# We generate a unique ID string for the style tag. 
+# This FORCES the browser to delete the old CSS and load the new one every single time.
+unique_style_id = f"theme-{st.session_state.persona.replace(' ', '-')}"
 
-theme_container.markdown(f"""
-    <style>
-    /* Target the main view container instead of .stApp */
+st.markdown(f"""
+    <style id="{unique_style_id}">
+    /* Target the main view container */
     [data-testid="stAppViewContainer"] {{
         background: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url("{current['bg_img']}") !important;
         background-size: cover !important;
@@ -78,7 +79,7 @@ theme_container.markdown(f"""
         transition: background 0.4s ease-in-out;
     }}
 
-    /* Make the default Streamlit header transparent so it doesn't block the background */
+    /* Make the default Streamlit header transparent */
     [data-testid="stHeader"] {{
         background-color: transparent !important;
     }}
