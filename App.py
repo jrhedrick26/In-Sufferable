@@ -1,5 +1,6 @@
 import streamlit as st
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import time
 
 # --- PAGE CONFIG ---
@@ -10,7 +11,7 @@ PERSONAS = {
     "The Commander": {
         "icon": "🪖", 
         "color": "#a3cf62", 
-        "bg_img": "https://images.unsplash.com/photo-1508614589041-895b88991e3e?q=80&w=2000&auto=format&fit=crop", # Military silhouette
+        "bg_img": "https://images.unsplash.com/photo-1508614589041-895b88991e3e?q=80&w=2000&auto=format&fit=crop", 
         "tagline": "Soldier-Scholar & Strategic Thought Leader.",
         "prompt": """You are a 'Military Thought Leader' on LinkedIn. You sound like a Battalion Commander with an MBA.
         Your mission is to take a mundane user story and turn it into a profound lesson on 'Organizational Readiness'.
@@ -26,7 +27,7 @@ PERSONAS = {
     "The MD": {
         "icon": "💼", 
         "color": "#00ffcc", 
-        "bg_img": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2000&auto=format&fit=crop", # Skyscrapers
+        "bg_img": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2000&auto=format&fit=crop", 
         "tagline": "Capital Allocation & High-Stakes Finance.",
         "prompt": """You are a high-energy Venture Capitalist or Managing Director in a Patagonia vest. 
         Your mission is to turn a user's story into a lesson about ROI and scaling.
@@ -41,7 +42,7 @@ PERSONAS = {
     "The Chief People Officer": {
         "icon": "✨", 
         "color": "#ff99cc", 
-        "bg_img": "https://images.unsplash.com/photo-1557682250-33bd709cbe85?q=80&w=2000&auto=format&fit=crop", # Abstract pink/purple mesh
+        "bg_img": "https://images.unsplash.com/photo-1557682250-33bd709cbe85?q=80&w=2000&auto=format&fit=crop", 
         "tagline": "Toxic Positivity & Human-Centric Synergy.",
         "prompt": """You are a 'Chief People Officer' who uses words like 'synergy' and 'alignment'. 
         Your mission is to take a user's story and turn it into a lesson about 'Vulnerability' and 'Culture'.
@@ -65,17 +66,16 @@ if "messages" not in st.session_state:
 current = PERSONAS[st.session_state.persona]
 
 # --- DYNAMIC CSS (THE TIMESTAMP HACK) ---
-# Generating a microsecond timestamp guarantees the browser treats this as a brand new stylesheet on every click.
 css_id = int(time.time() * 1000)
 
 st.markdown(f"""
     <style id="theme-{css_id}">
-    /* 1. Base Fallback Color (If image fails) */
+    /* Base Fallback Color */
     [data-testid="stAppViewContainer"] {{
         background-color: #121212 !important; 
     }}
     
-    /* 2. The Actual Image & Overlay */
+    /* The Actual Image & Overlay */
     [data-testid="stAppViewContainer"]::before {{
         content: "";
         position: absolute;
@@ -140,18 +140,24 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# --- API SETUP ---
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"].strip())
+# --- API SETUP (NEW SDK) ---
+# The new SDK uses a Client object instead of global configuration
+client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"].strip())
 
 # --- MODEL SCOUT ---
 @st.cache_resource
 def get_working_model():
+    # Safely checks for available models in the new SDK format
     try:
-        available = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        for target in ["models/gemini-1.5-flash", "models/gemini-pro"]:
-            if target in available: return target
-        return available[0]
-    except: return None
+        models = client.models.list()
+        available = [m.name for m in models]
+        for target in ["gemini-2.5-flash", "gemini-1.5-flash"]:
+            # Check for both raw name and 'models/' prefixed name
+            if target in available or f"models/{target}" in available:
+                return target
+        return "gemini-1.5-flash" # Fallback
+    except: 
+        return "gemini-1.5-flash"
 
 model_name = get_working_model()
 
@@ -199,15 +205,18 @@ if prompt := st.chat_input("Tell me what happened today..."):
 
     with st.chat_message("assistant", avatar=current["icon"]):
         try:
-            model = genai.GenerativeModel(
-                model_name=model_name, 
-                system_instruction=current['prompt'],
-                generation_config={"temperature": 0.85}
-            )
-            
             full_prompt = f"Transform this story into a coherent, cringe-worthy LinkedIn post: '{prompt}'. Remember: Connect the story to a 'leadership' lesson using your persona's jargon."
             
-            response = model.generate_content(full_prompt)
+            # THE NEW SDK GENERATION CALL
+            response = client.models.generate_content(
+                model=model_name,
+                contents=full_prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=current['prompt'],
+                    temperature=0.85,
+                )
+            )
+            
             raw_msg = response.text
             
             # Python post-processing to brutally enforce the "Broetry" format.
