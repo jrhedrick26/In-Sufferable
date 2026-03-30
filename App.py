@@ -1,5 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
+import time
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="IN-SUFFERABLE", page_icon="📈", layout="centered")
@@ -9,7 +10,7 @@ PERSONAS = {
     "The Commander": {
         "icon": "🪖", 
         "color": "#a3cf62", 
-        "bg_img": "https://images.unsplash.com/photo-1518544801976-3e159e50e5bb?q=80&w=2000&auto=format&fit=crop",
+        "bg_img": "https://images.unsplash.com/photo-1508614589041-895b88991e3e?q=80&w=2000&auto=format&fit=crop", # Military silhouette
         "tagline": "Soldier-Scholar & Strategic Thought Leader.",
         "prompt": """You are a 'Military Thought Leader' on LinkedIn. You sound like a Battalion Commander with an MBA.
         Your mission is to take a mundane user story and turn it into a profound lesson on 'Organizational Readiness'.
@@ -25,7 +26,7 @@ PERSONAS = {
     "The MD": {
         "icon": "💼", 
         "color": "#00ffcc", 
-        "bg_img": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2000&auto=format&fit=crop",
+        "bg_img": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2000&auto=format&fit=crop", # Skyscrapers
         "tagline": "Capital Allocation & High-Stakes Finance.",
         "prompt": """You are a high-energy Venture Capitalist or Managing Director in a Patagonia vest. 
         Your mission is to turn a user's story into a lesson about ROI and scaling.
@@ -40,7 +41,7 @@ PERSONAS = {
     "The Chief People Officer": {
         "icon": "✨", 
         "color": "#ff99cc", 
-        "bg_img": "https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2000&auto=format&fit=crop",
+        "bg_img": "https://images.unsplash.com/photo-1557682250-33bd709cbe85?q=80&w=2000&auto=format&fit=crop", # Abstract pink/purple mesh
         "tagline": "Toxic Positivity & Human-Centric Synergy.",
         "prompt": """You are a 'Chief People Officer' who uses words like 'synergy' and 'alignment'. 
         Your mission is to take a user's story and turn it into a lesson about 'Vulnerability' and 'Culture'.
@@ -63,18 +64,27 @@ if "messages" not in st.session_state:
 # Update UI constants based on current persona
 current = PERSONAS[st.session_state.persona]
 
-# --- DYNAMIC CSS (STREAMLIT 1.37+ FIX) ---
-# Using st.html() bypasses the Markdown wrapper and forces direct DOM injection
-st.html(f"""
-    <style>
-    /* Target the main view container */
+# --- DYNAMIC CSS (THE TIMESTAMP HACK) ---
+# Generating a microsecond timestamp guarantees the browser treats this as a brand new stylesheet on every click.
+css_id = int(time.time() * 1000)
+
+st.markdown(f"""
+    <style id="theme-{css_id}">
+    /* 1. Base Fallback Color (If image fails) */
     [data-testid="stAppViewContainer"] {{
-        background-color: #1a1a1a !important; /* Fallback if image fails */
+        background-color: #121212 !important; 
+    }}
+    
+    /* 2. The Actual Image & Overlay */
+    [data-testid="stAppViewContainer"]::before {{
+        content: "";
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
         background-image: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url("{current['bg_img']}") !important;
         background-size: cover !important;
         background-position: center !important;
         background-attachment: fixed !important;
-        transition: background-image 0.4s ease-in-out;
+        z-index: -1;
     }}
 
     /* Make the default Streamlit header transparent */
@@ -128,7 +138,7 @@ st.html(f"""
     /* Hide Sidebar */
     [data-testid="stSidebar"] {{ display: none; }}
     </style>
-""")
+    """, unsafe_allow_html=True)
 
 # --- API SETUP ---
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"].strip())
