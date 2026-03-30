@@ -154,17 +154,11 @@ if not model_name:
     st.error("🚨 SATELLITE UPLINK FAILED.")
     st.stop()
 
-# Display history
-for i, msg in enumerate(st.session_state.messages):
+# Display history (Clean)
+for msg in st.session_state.messages:
     icon = "👤" if msg["role"] == "user" else current["icon"]
     with st.chat_message(msg["role"], avatar=icon):
         st.markdown(msg["content"])
-        
-        # ONE-CLICK COPY (Read-Only)
-        if msg["role"] == "assistant" and i > 0:
-            with st.expander("📋 1-Click Copy"):
-                # st.code makes the text read-only and adds a native copy button
-                st.code(msg["content"], language="text")
 
 if prompt := st.chat_input("Tell me what happened today..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -190,11 +184,6 @@ if prompt := st.chat_input("Tell me what happened today..."):
                 broetry_msg = '\n\n'.join(clean_lines)
                 
                 st.markdown(broetry_msg)
-                
-                # ONE-CLICK COPY (Read-Only)
-                with st.expander("📋 1-Click Copy"):
-                    st.code(broetry_msg, language="text")
-                
                 st.session_state.messages.append({"role": "assistant", "content": broetry_msg})
             except Exception as e:
                 st.error(f"UPLINK ERROR: {str(e)}")
